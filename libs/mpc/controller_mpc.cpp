@@ -1,15 +1,23 @@
 #include "controller_mpc.h"
 
-CommBuffer<ekf_to_mpc> mpc_rx;
-Subscriber mpc(ekf_to_mpc_topic,mpc_rx);
+tof_to_ekf mpc_phase_selector_temp;
 
 ekf_to_mpc mpc_rx_temp;
 mpc_to_current_controller mpc_tx_temp;
 
-void mpc_input::phase_switch_selector()
+void mpc_input::mpc_phase_selector()
 {
-    if(abs())
+    ekf_rx.getOnlyIfNewData(mpc_phase_selector_temp);
+    if((abs(mpc_phase_selector_temp.tof_dist_filtered[2]) > MPC_THETA_TOLERANCE_VAL)
+       ||(abs(mpc_phase_selector_temp.tof_dist_filtered[3]) > MPC_THETA_TOLERANCE_VAL))
+    { curr_phase = ALLIGNMENT; }
 
+    else if(if((abs(mpc_phase_selector_temp.tof_dist_filtered[0]) > MPC_X_TOLERANCE_VAL)
+               ||(abs(mpc_phase_selector_temp.tof_dist_filtered[1]) > MPC_V_TOLERANCE_VAL)))
+    { curr_phase = APPROACH; }
+    
+    else 
+    { curr_phase = DOCKING; }
 }
 
 void mpc_input::init_matrix()
@@ -102,10 +110,22 @@ void mpc_input::phase_switch_case()
 
 void mpc_input::init()
 {
+    mpc_phase_selector();
+    init_matrix();
+    state_space_init();
+}
+
+void mpc_input::publish_mpc_result()
+{
+    
 
 }
 
 void mpc_input::run()
 {
-
+    for(int i = 0 ; i < N ; i++)
+    { 
+        phase_switch_case();
+        publish_mpc_result();
+    }
 }

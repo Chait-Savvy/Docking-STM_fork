@@ -45,3 +45,12 @@ extern Topic<tof_to_ekf> tof_to_ekf_topic;
 extern Topic<ekf_to_mpc> ekf_to_mpc_topic;
 extern Topic<mpc_to_current_controller> mpc_to_i_topic;
 extern Topic<status_and_desired_current> status_and_desired_current_topic;
+
+extern CommBuffer<tof_to_ekf> ekf_rx;
+extern Subscriber subs_ekf;
+
+extern CommBuffer<itr_step_status> ekf_itr_status;
+extern Subscriber ekf_itr;
+
+extern CommBuffer<ekf_to_mpc> mpc_rx;
+extern Subscriber mpc;

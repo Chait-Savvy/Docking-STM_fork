@@ -39,10 +39,10 @@ private :
 
 public : 
 
-    mpc_input(const char* t_name , const int priority , const int stack_size , allignment_phase Curr_phase = ALLIGNMENT , double pred_horz = MPC_PREDICTION_HORIZON) : 
-             Thread(t_name,priority,stack_size) , curr_phase(Curr_phase) , N(pred_horz) {}    
+    mpc_input(const char* t_name , const int priority , const int stack_size , double pred_horz = MPC_PREDICTION_HORIZON) : 
+             Thread(t_name,priority,stack_size) , N(pred_horz) {}    
 
-    void phase_switch_selector()
+    void mpc_phase_selector()
 
     void init_matrix();
 
@@ -55,6 +55,8 @@ public :
     void Docking_phase();
     
     void phase_switch_case();
+
+    void publish_mpc_result();
    
     void init();
 

@@ -6,7 +6,6 @@
 #include "matlib.h"
 #include "config_mpc.h"
 #include "topic_config.h"
-#include "topic_config.h"
 
 
    /* 

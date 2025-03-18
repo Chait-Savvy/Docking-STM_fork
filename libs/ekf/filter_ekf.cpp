@@ -1,11 +1,5 @@
 #include "filter_ekf.h"
 
-CommBuffer<tof_to_ekf> ekf_rx;
-Subscriber subs_ekf(tof_to_ekf_topic,ekf_rx);
-
-CommBuffer<itr_step_status> ekf_itr_status;
-Subscriber ekf_itr(curr_itr_number_topic,ekf_itr_status);
-
 itr_step_status ekf_itr_status_temp;
 tof_to_ekf ekf_rx_temp;
 ekf_to_mpc ekf_tx_temp;
