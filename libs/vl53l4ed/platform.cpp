@@ -8,9 +8,10 @@
 #include "rodos.h"
 #include "platform.h"
 #include "satellite_config.h"
+#include "config_gold.h"
 
 // Disable MUX (1) to use TOF without MUX
-#define  VL53L4ED_DISABLE_MUX 0
+#define  VL53L4ED_DISABLE_MUX 1
 
 HAL_I2C I2C(TOF_I2C_HAL_IDX, TOF_I2C_HAL_GPIO_SCL, TOF_I2C_HAL_GPIO_SDA);
 

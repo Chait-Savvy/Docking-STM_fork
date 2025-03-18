@@ -138,7 +138,6 @@ tof_status tof::get_single_distance(const tof_idx idx, int *distance)
   }
 
   *distance = -123;
-
   return TOF_STATUS_ERROR;
 }
 
@@ -240,7 +239,7 @@ void tof::shut_down(void)
   AT(NOW() + 5 * MILLISECONDS);
 }
 
-void tof::int_xshunt(void)
+void tof::int_xshut(void)
 {
   tof_xshut_a.init(true, 1, 0);
   tof_xshut_b.init(true, 1, 0);

@@ -32,6 +32,7 @@ void magnet_thread::run(void)
 {
   while(1)
   {
+    
   }
 }
 

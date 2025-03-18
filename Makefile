@@ -37,6 +37,9 @@ CXX_SOURCES = \
 libs/topics.cpp \
 libs/pid/pid.cpp \
 libs/hbridge/hbridge.cpp \
+libs/ekf/filter_ekf.cpp \
+libs/mpc/controller_mpc.cpp \
+libs/topics/topic_config.cpp \
 \
 libs/vl53l4ed/platform.cpp \
 libs/vl53l4ed/VL53L4ED_api.cpp \
@@ -107,19 +110,19 @@ AS_INCLUDES = \
 
 # C includes
 C_INCLUDES =  \
--I"../rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
--I"../rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
--I"../rodos/src/bare-metal/stm32f4/platform-parameter/skith" \
--I"../rodos/src/bare-metal/stm32f4/CMSIS/Include" \
--I"../rodos/src/bare-metal/stm32f4/sdCard" \
--I"../rodos/src/bare-metal/stm32f4/hal" \
--I"../rodos/src/bare-metal/stm32f4" \
--I"../rodos/src/bare-metal-generic" \
--I"../rodos/src/independent/gateway" \
--I"../rodos/src/independent" \
--I"../rodos/default_usr_configs" \
--I"../rodos/api/hal" \
--I"../rodos/api" \
+-I"/rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
+-I"/rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
+-I"/rodos/src/bare-metal/stm32f4/platform-parameter/skith" \
+-I"/rodos/src/bare-metal/stm32f4/CMSIS/Include" \
+-I"/rodos/src/bare-metal/stm32f4/sdCard" \
+-I"/rodos/src/bare-metal/stm32f4/hal" \
+-I"/rodos/src/bare-metal/stm32f4" \
+-I"/rodos/src/bare-metal-generic" \
+-I"/rodos/src/independent/gateway" \
+-I"/rodos/src/independent" \
+-I"/rodos/default_usr_configs" \
+-I"/rodos/api/hal" \
+-I"/rodos/api" \
 \
 -I"libs/pid" \
 -I"libs/hbridge" \

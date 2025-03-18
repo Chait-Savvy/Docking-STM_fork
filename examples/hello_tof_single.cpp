@@ -1,7 +1,7 @@
 /*
   Test file for a single time of flight sensor.
   If you are using single ToF without I2C MUX,
-  please set VL53L4CD_DISABLE_MUX (platform_tamariw.cpp) to 1.
+  please set VL53L4CD_DISABLE_MUX (platform.cpp) to 1.
   
   2024-06-12
 */
@@ -24,7 +24,7 @@ public:
   void run();
 };
 
-void init_params()
+void init_params()  
 {
   if(tof::init(TOF_IDX_1) == TOF_STATUS_OK)
   {
@@ -40,7 +40,7 @@ void init_params()
 
 void tof_thread::init()
 {
-  tof::int_xshunt();
+  tof::int_xshut();
 }
 
 void tof_thread::run()

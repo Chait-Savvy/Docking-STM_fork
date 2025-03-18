@@ -37,7 +37,7 @@ namespace tof
   void restart(void);
   void shut_down(void);
   void i2c_reset(void);
-  void int_xshunt(void);
+  void int_xshut(void);
 
   void enable_median_filter(void);
   void disable_median_filter(void);

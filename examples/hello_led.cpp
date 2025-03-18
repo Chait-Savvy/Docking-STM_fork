@@ -41,6 +41,7 @@ void led_thread::run()
   // Alternate through each far and near LEDs
   TIME_LOOP(0, period * MILLISECONDS)
   {
+    PRINTF("conter %d",far_counter);
     far_counter ++;
     near_counter ++;
 

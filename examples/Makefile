@@ -45,7 +45,9 @@ CXX_SOURCES = \
 ../satellite/utils.cpp \
 ../satellite/magnet.cpp \
 ../libs/hbridge/hbridge.cpp \
-$(main)
+../examples/hello_world.cpp 
+
+
 
 #######################################
 # binaries
@@ -117,8 +119,12 @@ C_INCLUDES =  \
 -I"../libs/hbridge" \
 -I"../libs/lsm9ds1" \
 -I"../libs/pid" \
+-I"../libs/mpc" \
+-I"../libs/ekf" \
+-I"../libs/topics" \
 -I"../threads" \
--I"../satellite"
+-I"../satellite" 
+
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -214,7 +220,7 @@ rodos: clean
 	rm -r rodos/build/CMakeFiles || true
 	rm -r rodos/build/test-suite || true
 	rm rodos/build/* || true
-	cmake -Srodos -Brodos/build -DCMAKE_TOOLCHAIN_FILE=cmake/port/discovery.cmake
+	cmake -Srodos -Brodos/build -DCMAKE_TOOLCHAIN_FILE=cmake/port/skith.cmake
 	make -C rodos/build
 
 udev:
@@ -232,7 +238,7 @@ clean:
 rodos: clean
 	if not exist "rodos" git clone https://gitlab.com/rodos/rodos.git
 	if exist "rodos/build" rmdir /s/q "rodos/build"
-	cmake -Srodos -Brodos/build -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=cmake/port/discovery.cmake
+	cmake -Srodos -Brodos/build -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=cmake/port/skith.cmake
 	make -C rodos/build
 endif
 

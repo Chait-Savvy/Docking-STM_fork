@@ -2,6 +2,13 @@
 #define _TOPICS_H_
 
 #include "rodos.h"
+#include "matlib.h"
+
+struct test_matrix
+{
+  RODOS::Matrix_<3,3> ABC{(double []){},"D"};
+  RODOS::Matrix_<3,3> DEF{(double []){1},"H"};
+};
 
 struct data_tof_range
 {
@@ -30,11 +37,14 @@ struct data_collision_ctrl
 struct data_desired_current
 {
   float i[4]; // milli Amp
+  RODOS::Vector_<4> SS{(double []){0},{"U"}};
 };
 
 extern Topic<data_tof_range> topic_tof_range;
 extern Topic<data_current_ctrl> topic_current_ctrl;
 extern Topic<data_collision_ctrl> topic_collision_ctrl;
 extern Topic<data_desired_current> topic_desired_current;
+
+extern Topic<data_desired_current> test_data;
 
 #endif // telecommand.h

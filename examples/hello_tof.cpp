@@ -35,7 +35,7 @@ void init_params()
 
 void tof_thread::init()
 {
-  tof::int_xshunt();
+  tof::int_xshut();
 }
 
 void tof_thread::run()

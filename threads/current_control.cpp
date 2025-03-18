@@ -34,7 +34,7 @@ void current_control_thread::init()
 void current_control_thread::run(void)
 {
   TIME_LOOP(THREAD_START_CURRENT_CTRL_MILLIS * MILLISECONDS, period * MILLISECONDS)
-  {
+  {   
     time = NOW();
     tx.i[0] = tx.i[1] = tx.i[2] = tx.i[3] = 0.0;
 
