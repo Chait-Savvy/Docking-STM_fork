@@ -50,11 +50,11 @@ CXX_SOURCES = \
 ../threads/topic_config.cpp \
 ../threads/tof_range.cpp \
 ../threads/telemetry.cpp \
+../examples/master_thread.cpp \
+../threads/telecommand.cpp \
 ../threads/topics.cpp
 
 
-#../examples/master_thread.cpp \
-#../threads/telecommand.cpp \
 
 #../threads/controller_mpc.cpp \
 #../threads/controller_current.cpp \

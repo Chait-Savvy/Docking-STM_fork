@@ -14,7 +14,6 @@ public :
 
     void init()
     {
-        HAL_UART WIFI_1(UART_IDX3, GPIO_027, GPIO_026, GPIO_INVALID, GPIO_INVALID);
     }
     void run()
     {
