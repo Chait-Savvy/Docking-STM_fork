@@ -1,7 +1,0 @@
-open sftp://pi:raspberry@192.168.0.101/ -hostkey="ssh-ed25519 255 xA3EJg5r6CY3zBXUv9MlG1x9zXdHL3hhspcczpgT1cE"
-
-cd ./bootloader
-put .\build\main.hex
-call openocd
-close
-exit

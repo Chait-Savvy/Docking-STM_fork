@@ -32,15 +32,20 @@ namespace tof
   bool get_velocity(const int d[4], const double dt, float v[4]);
   tof_status calibrate(const int16_t target_mm, const int16_t n);
   tof_status get_single_distance(const tof_idx idx, int *distance);
+  tof_status get_single_distance_mean(const tof_idx idx, int *distance);
 
   void wakeup(void);
   void restart(void);
   void shut_down(void);
   void i2c_reset(void);
-  void int_xshut(void);
+  void int_xshunt(void);
 
   void enable_median_filter(void);
   void disable_median_filter(void);
+
+  void enable_mean_filter(void);
+  void disable_mean_filter(void);
+
 }
 
 #endif // tof.h

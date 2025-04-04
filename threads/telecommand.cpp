@@ -1,200 +1,211 @@
-
-#include <stdlib.h>
-#include "fsm.h"
-#include "led.h"
-#include "magnet.h"
 #include "telecommand.h"
-#include "current_control.h"
-#include "satellite_config.h"
-#include "collision_control.h"
 
-bool led_switch = false;
+extern HAL_UART WIFI_1;
 
-namespace RODOS
+static int last_sign[4] = {1,1,1,1};
+static pid ctrl[4];
+static data_current_ctrl tx;
+
+
+bool telecommand_thread::parse_tcmd(const char *msg, tcommand_t *cmd, float *data)
 {
-  extern HAL_UART uart_stdout;
+  // Check if the message starts with TCMD_START_CHAR and ends with TCMD_STOP_CHAR
+  if (msg[0] != TELECOMMAND_START || msg[strlen(msg) - 1] != TELECOMMAND_STOP)
+  {
+    return false; // Invalid message format
+  }
+
+  // Find the position of the delimiter
+  const char *delimiter_pos = strchr(msg, TELECOMMAND_DELIMITTER);
+  if (!delimiter_pos)
+  {
+    return false; // Delimiter not found
+  }
+
+  // Extract and validate the command
+  int command_int = 0;
+  const char *ptr = msg + 1; // Start after TCMD_START_CHAR
+  while (ptr < delimiter_pos)
+  {
+    if (*ptr >= '0' && *ptr <= '9')
+    {
+      command_int = command_int * 10 + (*ptr - '0'); // Convert char to int
+    }
+    else
+    {
+      return false; // Invalid character in command
+    }
+    ptr++;
+  }
+
+  // Validate the command range using TCMD_LENGTH
+  if (command_int < 0 || command_int >= TCMD_LENGTH)
+  {
+    return false; // Invalid command
+  }
+
+  // Extract and convert the data
+  float data_value = 0.0f;
+  ptr = delimiter_pos + 1; // Start after TCMD_DELIMITER
+  bool decimal_found = false;
+  float decimal_place = 0.1f;
+
+  while (*ptr != TELECOMMAND_STOP && *ptr != '\0')
+  {
+    if (*ptr >= '0' && *ptr <= '9')
+    {
+      if (decimal_found)
+      {
+        data_value += (*ptr - '0') * decimal_place;
+        decimal_place *= 0.1f;
+      }
+      else
+      {
+        data_value = data_value * 10.0f + (*ptr - '0');
+      }
+    }
+    else if (*ptr == '.')
+    {
+      decimal_found = true;
+    }
+    else
+    {
+      return false; // Invalid character in data
+    }
+    ptr++;
+  }
+
+  // Assign the parsed values
+  *cmd = static_cast<tcommand_t>(command_int);
+  *data = data_value;
+
+  return true; // Success
 }
 
-#define TeleUART uart_stdout
-
-uint8_t ReceiveState = 0;
-uint8_t SignFlag = 0;
-uint8_t  DotFlag = 0;
-uint8_t DataIndex = 0;
-char telecommand_id;
-char ReceiveData[TELECOMMAND_MAX_LEN];
-
-HAL_GPIO power_reset_pin(GPIO_058);
-
-uint8_t decode_command(uint8_t rx_buffer)
+double telecommand_thread::sign(const double in)
 {
-  uint8_t success=0;
-
-  switch (ReceiveState)
+  if (in < 0)
   {
-  case 0:
-    SignFlag=0;
-    DotFlag=0;
-    DataIndex=0;
-    if (rx_buffer==TELECOMMAND_START)
-    {
-      ReceiveState=1;
-    }
-    break;
-
-  case 1:
-    SignFlag=0;
-    DotFlag=0;
-    DataIndex=0;
-    if (rx_buffer==TELECOMMAND_START)
-    {
-      ReceiveState=1;
-    }
-    else {
-      telecommand_id = rx_buffer;
-      ReceiveState = 2;
-    }
-    break;
-
-  case 2:
-    if (rx_buffer=='+' || rx_buffer=='-')
-    {
-      if (SignFlag==0 && DataIndex==0)
-        {
-        SignFlag=1;
-        ReceiveData[DataIndex]=rx_buffer;
-        DataIndex++;
-        ReceiveState = 2;
-        }
-      else {ReceiveState = 0;}
-    }
-    else if (rx_buffer=='.')
-    {
-      if (DotFlag==0)
-        {
-          DotFlag=1;
-          ReceiveData[DataIndex]=rx_buffer;
-          DataIndex++;
-          ReceiveState = 2;
-        }
-      else {ReceiveState = 0;}
-    }
-    else if (rx_buffer>='0' && rx_buffer<='9')
-    {
-        ReceiveData[DataIndex]=rx_buffer;
-        DataIndex++;
-      if (DataIndex > TELECOMMAND_MAX_LEN) {ReceiveState = 0;}
-      else {ReceiveState = 2;}
-    }
-    else if (rx_buffer==TELECOMMAND_START)
-    {
-      ReceiveState=1;
-    }
-    else if (rx_buffer==TELECOMMAND_STOP)
-    {
-      ReceiveData[DataIndex]= 0x00;
-      success=execute_command(telecommand_id);
-      ReceiveState=0;
-    }
-    else { ReceiveState=0;}
-    break;
-  default:
-    ReceiveState=0;
-    break;
+    return -1;
   }
-  return success;
+  else
+  {
+    return 1;
+  }
 }
 
-uint8_t execute_command(uint8_t telecommand_id)
+float telecommand_thread::pid_ctrl_magnets(int idx, float data)
 {
-  switch (telecommand_id)
-  {
-  case ENABLE_CONTROL:
-  {
-    control_mode = true;
+  static float pwm[4] = {0,0,0,0};
+  // float pwm;
+  tx.i[0] = tx.i[1] = tx.i[2] = tx.i[3] = 0.0;
+  magnet::get_current(tx.i); // Feedback measurements
+  for(uint8_t i = 0; i < 4; i++)
+    {
+      tx.i[i] = last_sign[i] * tx.i[i]; // Signed current
+      float error = data - tx.i[i];
+      pwm[i] = ctrl[i].update(error, 20 / 1000.0);
+      last_sign[i] = sign(pwm[i]); // Store sign
+    }
+  return pwm[idx]; 
+}
 
-    if(int(atof(ReceiveData))== 1) // Idle mode
-    {
-      // Magnets off and disable magnet thread
-      tamariw_current_control_thread.stop_control = true;
-      tamariw_collision_control_thread.stop_thread = true;
-      fsm::set_state(STANDBY);
-    }
-    else // Resume control thread
-    {
-      tamariw_current_control_thread.stop_control = false;
-      tamariw_collision_control_thread.stop_thread = false;
-      tamariw_collision_control_thread.resume();
-      fsm::set_state(START_DOCKING);
-    }
-    break;
-  }
-  case TEST_MAGNETS:
-  {
-    control_mode = false;
-    for(uint8_t i = 0; i < 4; i++)
-    {
-      dpid[i].reset_memory();
-    }
-    break;
-  }
-  case PI_POS_GAIN_KP:
-  {
-    float kp = float(atof(ReceiveData));
-    dpid[0].kp = kp;
-    dpid[1].kp = kp;
-    dpid[2].kp = kp;
-    dpid[3].kp = kp;
-    break;
-  }
-  case PI_POS_GAIN_KI:
-  {
-    float ki = float(atof(ReceiveData));
-    dpid[0].ki = ki;
-    dpid[1].ki = ki;
-    dpid[2].ki = ki;
-    dpid[3].ki = ki;
-    break;
-  }
-  case PI_VEL_GAIN_KP:
-  {
-    break;
-  }
-  case PI_VEL_GAIN_KI:
-  {
-    break;
-  }
-  case DISTANCE_SP:
-  {
-    dsp = float(atof(ReceiveData));
-    break;
-  }
-  default:
-  {
-    return 0;
-  }
-  }
-
-  return 1;
+bool telecommand_thread::execute_command(tcommand_t cmd, float data, tcmd_t *tcmd)
+{
+  tcmd->idx = cmd;
+  tcmd->data = data;
+  return true;
 }
 
 void telecommand_thread::init()
 {
-  magnet::init();
-  led::init_far();
-  led::init_near();
+     WIFI_1.init(115200); 
+     magnet::init();
+     for(uint8_t i = 0; i < 4; i++)
+     {
+       ctrl[i].set_kp(PID_CURRENT_KP);
+       ctrl[i].set_ki(PID_CURRENT_KI);
+       ctrl[i].set_control_limits(PID_CURRENT_UMIN, PID_CURRENT_UMAX);
+     }
+//   led::init_far();
+//   led::init_near();
 }
 
 void telecommand_thread::run()
 {
-  char rx_buffer;
+  // while(true)
+  // {
+  //   // WIFI_1.suspendUntilDataReady();
+  //   // decode_command(rx_buffer);
+  //   // PRINTF("\n%c\n", rx_buffer);
+  // }
+  // TIME_LOOP(THREAD_TCMD_START * MILLISECONDS, TIME_PERIOD_PER_THREAD * MILLISECONDS)
+  // {
+    
+    size_t rxlen = WIFI_1.read(tcmd_msg, sizeof(tcmd_msg));
+    
+    PRINTF("\n Inside TCMD thread, rcvd msg size : %d ",rxlen);
+    if (rxlen > 0)
+    {
+      PRINTF(tcmd_msg);
+      tcommand_t cmd;
+      float data;
 
-  while (1)
-  {
-    TeleUART.suspendUntilDataReady();
-    TeleUART.read(&rx_buffer,1);
-    decode_command(rx_buffer);
-  }
+      if (parse_tcmd(tcmd_msg, &cmd, &data))
+      {
+        if(execute_command(cmd, data, &tcmd_data))
+        {
+          if(Magnet_safety_flag)
+          {
+            switch(cmd)
+          {
+            case TCMD_APPROACH:
+              	magnet::actuate(MAGNET_IDX_0,pid_ctrl_magnets(0,data));
+                magnet::actuate(MAGNET_IDX_1,pid_ctrl_magnets(1,data));
+                magnet::actuate(MAGNET_IDX_2,pid_ctrl_magnets(2,data));
+                magnet::actuate(MAGNET_IDX_3,pid_ctrl_magnets(3,data));
+                PRINTF("APPROACH with force : %0.2f",data);
+                break;
+            case TCMD_ALLIGN_CW:
+                magnet::stop(MAGNET_IDX_0);
+                magnet::stop(MAGNET_IDX_3);
+                magnet::actuate(MAGNET_IDX_1,pid_ctrl_magnets(1,data));
+                magnet::actuate(MAGNET_IDX_2,pid_ctrl_magnets(2,data));
+                PRINTF("ALLIGN CW with force : %0.2f",data);
+                break;
+            case TCMD_ALLIGN_CCW:
+              	magnet::actuate(MAGNET_IDX_0,pid_ctrl_magnets(0,data));
+                magnet::stop(MAGNET_IDX_1);
+                magnet::stop(MAGNET_IDX_2);
+                magnet::actuate(MAGNET_IDX_3,pid_ctrl_magnets(3,data));
+                PRINTF("ALLIGN CCW with force : %0.2f",data);
+                break;
+            case TCMD_DOCKING_CW:
+                magnet::stop(MAGNET_IDX_0);
+                magnet::stop(MAGNET_IDX_3);
+                magnet::actuate(MAGNET_IDX_1,pid_ctrl_magnets(1,data));
+                magnet::actuate(MAGNET_IDX_2,pid_ctrl_magnets(2,data));
+                PRINTF("Docking CW with force : %0.2f",data);
+                break;   
+            case TCMD_DOCKING_CCW:
+                magnet::actuate(MAGNET_IDX_0,pid_ctrl_magnets(0,data));
+                magnet::stop(MAGNET_IDX_1);
+                magnet::stop(MAGNET_IDX_2);
+                magnet::actuate(MAGNET_IDX_3,pid_ctrl_magnets(3,data));
+                PRINTF("Docking CCW with force : %0.2f",data);
+                break;
+            case TCMD_MAGNETS_ON_OFF_FLAG : 
+                magnet::stop(MAGNET_IDX_ALL);
+                PRINTF("MAGNETS ON/OFF : %0.2f",data);
+                break;              
+          }
+
+          } 
+          
+        }
+      }
+    }
+  // }
 }
 
-telecommand_thread tamariw_telecommand_thread("telecommand_thread", THREAD_PRIO_TELECOMMAND);
+// telecommand_thread tamariw_telecommand_thread("telecommand_thread", THREAD_PRIO_TELECOMMAND);

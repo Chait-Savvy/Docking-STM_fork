@@ -8,6 +8,8 @@
 #include "platform.h"
 #include "tof_range.h"
 
+data_tof_range tof_data; // ToF topic
+
 void tof_range_thread::init()
 {
   tof::int_xshunt();
@@ -17,24 +19,27 @@ void tof_range_thread::init_params()
 {
   if (tof::init(TOF_IDX_ALL) == TOF_STATUS_OK)
   {
-    PRINTF("VL53L4CD initialized!\n");
+    //PRINTF("VL53L4CD initialized!\n");
   }
   else
   {
-    PRINTF("VL53L4CD error :(\n");
+    //PRINTF("VL53L4CD error :(\n");
   }
   tof::enable_median_filter();
+  tof::enable_mean_filter();
 }
 
 void tof_range_thread::run()
 {
   tof::wakeup();
   init_params();
+ 
 
-  TIME_LOOP (THREAD_START_TOF_MILLIS * MILLISECONDS, period * MILLISECONDS)
+  TIME_LOOP ( THREAD_TOF_START * MILLISECONDS, TIME_PERIOD_PER_THREAD * MILLISECONDS)
   {
     if(restart_tof)
     {
+    
       tof::restart();
       init_params();
       restart_tof = false;
@@ -52,12 +57,27 @@ void tof_range_thread::run()
       // Winsorized mean and approach detection.
       tof_data.dm = winsorized_mean(tof_data.d);
       tof_data.vm = winsorized_mean(tof_data.v);
-      tof_data.approach = detect_approach(tof_data.vm);
+      tof_data.approach = false;
+
+      // Calculation of x, y and z axises
+      tof_data.x_axis = get_x_axis(tof_data.d);
+      tof_data.y_axis = get_y_axis(tof_data.d);
+      tof_data.z_axis = get_z_axis(tof_data.d);
+
+      // Calculation of roll and pitch
+      tof_data.roll = get_roll(tof_data.d);
+      tof_data.pitch = get_pitch(tof_data.d);
+
+      // Angular velocities of roll and pitch
+      tof_data.w_roll = get_angular_velocity_roll(tof_data.roll, vel_dt, tof_data.w_roll);
+      tof_data.w_pitch = get_angular_velocity_pitch(tof_data.pitch, vel_dt, tof_data.w_pitch);
 
       // Publish data to collision control thread.
       tof_data.status = status;
       tof_data.dt = (NOW() - time_thread) / MILLISECONDS;
       topic_tof_range.publish(tof_data);
+
+      // PRINTF(" %0.2f %0.2f %0.2f %0.2f \n ", tof_data.dm , tof_data.vm  , tof_data.roll , tof_data.w_roll);
 
       // Restart ToFs if error.
       if(status != TOF_STATUS_OK)
@@ -66,33 +86,8 @@ void tof_range_thread::run()
       }
     }
   }
+  //PRINTF("tof thread time : %f \n",(float)((NOW() - time_thread) / MILLISECONDS));
 }
 
-/**
- * @brief Detects if two satellites are approaching each other.
- * Should be true for THREAD_PERIOD_TOF_MILLIS * FSM_V_SAMPLES millis
- * to be considered an approach.
- * @return true if last FSM_V_SAMPLES velocities are less than FSM_V_NEAR.
- */
-bool tof_range_thread::detect_approach(const float vr)
-{
-  // Shift to right and append new velocity.
-  for (int i = FSM_V_SAMPLES - 1; i > 0; i--)
-  {
-    n_vels[i] = n_vels[i - 1];
-  }
-  n_vels[0] = vr;
-
-  // Check if the satellites are approaching.
-  for(uint8_t i = 0; i < FSM_V_SAMPLES; i++)
-  {
-    if(!(n_vels[i] < FSM_V_NEAR))
-    {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-tof_range_thread tamariw_tof_range_thread("tof_range_thread", THREAD_PRIO_TELEMETRY);
+// extern tof_range_thread tamariw_tof_range_thread
+tof_range_thread tamariw_tof_range_thread("tof_range_thread",100);

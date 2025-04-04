@@ -6,13 +6,15 @@
 #include "rodos.h"
 #include "platform.h"
 #include "MedianFilter.h"
+#include "MeanFilter.h"
 #include "VL53L4ED_api.h"
 #include "satellite_config.h"
 #include "VL53L4ED_calibration.h"
 
 // Median filter for ToF readings
 static bool tof_filter_flag = false;
-static MedianFilter<int, 25> filter[4];
+static MedianFilter<int, 25> median_filter[4];
+static MeanFilter<int, 5> mean_filter[4];
 
 // Memory and flag for velocity computation
 static bool first_velocity = true;
@@ -83,7 +85,7 @@ tof_status tof::init(const tof_idx idx)
       return TOF_STATUS_ERROR;
     }
   }
-  PRINTF("TOF INIT FNINISH \r\n");
+  //PRINTF("TOF INIT FNINISH \r\n");
   return TOF_STATUS_OK;
 }
 
@@ -124,8 +126,11 @@ tof_status tof::get_single_distance(const tof_idx idx, int *distance)
   {
     if (tof_filter_flag)
     {
-      filter[(uint8_t)idx].addSample(tof_result.distance_mm);
-      *distance = filter[(uint8_t)idx].getMedian();
+      // mean_filter[(uint8_t)idx].addSample(tof_result.distance_mm);
+      // *distance = mean_filter[(uint8_t)idx].getMean();
+      median_filter[(uint8_t)idx].addSample(tof_result.distance_mm);
+      *distance = median_filter[(uint8_t)idx].getMedian();
+      //PRINTF("index %d distance %d\n", idx, *distance);
     }
     else
     {
@@ -138,6 +143,7 @@ tof_status tof::get_single_distance(const tof_idx idx, int *distance)
   }
 
   *distance = -123;
+
   return TOF_STATUS_ERROR;
 }
 
@@ -239,7 +245,7 @@ void tof::shut_down(void)
   AT(NOW() + 5 * MILLISECONDS);
 }
 
-void tof::int_xshut(void)
+void tof::int_xshunt(void)
 {
   tof_xshut_a.init(true, 1, 0);
   tof_xshut_b.init(true, 1, 0);
@@ -265,5 +271,71 @@ void tof::restart(void)
   tof::shut_down();
   tof::i2c_reset();
   tof::wakeup();
-  PRINTF("WAKEUP PIN DONE \r\n");
+  //PRINTF("WAKEUP PIN DONE \r\n");
+}
+
+
+void tof::enable_mean_filter(void)
+{
+  tof_filter_flag = true;
+}
+
+void tof::disable_mean_filter(void)
+{
+  tof_filter_flag = false;
+}
+
+
+tof_status tof::get_single_distance_mean(const tof_idx idx, int *distance)
+{
+  if (idx == TOF_IDX_ALL)
+  {
+    return TOF_STATUS_ERROR;
+  }
+
+  AT(NOW() + 2 * MILLISECONDS);
+  if (!PCA9546_SelPort((uint8_t)idx, TOF_I2C_MUX_ADDRESS))
+  {
+    PRINTF("TRY 1 port range \r\n");
+    AT(NOW() + 2 * MILLISECONDS);
+    if (!PCA9546_SelPort((uint8_t)idx, TOF_I2C_MUX_ADDRESS))
+      return TOF_STATUS_ERROR;
+  }
+
+  // Wait for data ready if it not
+  uint8_t data_ready = 0;
+  VL53L4ED_CheckForDataReady(TOF_I2C_ADDRESS, &data_ready);
+
+  if (data_ready != (uint8_t)1)
+  {
+    AT(NOW() + 2 * MILLISECONDS);
+    VL53L4ED_CheckForDataReady(TOF_I2C_ADDRESS, &data_ready);
+
+    if (data_ready != (uint8_t)1)
+    {
+      return TOF_STATUS_ERROR;
+    }
+  }
+
+  if (VL53L4ED_GetResult(TOF_I2C_ADDRESS, &tof_result) == VL53L4ED_ERROR_NONE)
+  {
+    PRINTF("index = %d", idx);
+    if (tof_filter_flag)
+    {
+      mean_filter[(uint8_t)idx].addSample(tof_result.distance_mm);
+      *distance = mean_filter[(uint8_t)idx].getMean();
+    }
+    else
+    {
+      *distance = tof_result.distance_mm;
+    }
+
+    VL53L4ED_ClearInterrupt(TOF_I2C_ADDRESS);
+
+    return TOF_STATUS_OK;
+  }
+
+  *distance = -123;
+
+  return TOF_STATUS_ERROR;
 }

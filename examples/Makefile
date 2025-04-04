@@ -1,4 +1,5 @@
-# Rishav (2020)
+# Please make sure RODOS is compiled using 'make rodos' on '../Makefile'.
+# rms (2020)
 
 # OS: Linux, Windows
 OS = Windows
@@ -45,9 +46,19 @@ CXX_SOURCES = \
 ../satellite/utils.cpp \
 ../satellite/magnet.cpp \
 ../libs/hbridge/hbridge.cpp \
-../examples/hello_world.cpp 
+\
+../threads/topic_config.cpp \
+../threads/tof_range.cpp \
+../threads/telemetry.cpp \
+../threads/topics.cpp
 
 
+#../examples/master_thread.cpp \
+#../threads/telecommand.cpp \
+
+#../threads/controller_mpc.cpp \
+#../threads/controller_current.cpp \
+#../threads/filter_ekf.cpp \
 
 #######################################
 # binaries
@@ -101,20 +112,20 @@ AS_INCLUDES = \
 
 # C includes
 C_INCLUDES =  \
--I"rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
--I"rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
--I"rodos/src/bare-metal/stm32f4/platform-parameter/discovery" \
--I"rodos/src/bare-metal/stm32f4/CMSIS/Include" \
--I"rodos/src/bare-metal/stm32f4/sdCard" \
--I"rodos/src/bare-metal/stm32f4/hal" \
--I"rodos/src/bare-metal/stm32f4" \
--I"rodos/src/bare-metal-generic" \
--I"rodos/src/independent/gateway" \
--I"rodos/src/independent" \
--I"rodos/support/support-libs" \
--I"rodos/api/hal" \
--I"rodos/api" \
--I"rodos/default_usr_configs" \
+-I"../rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
+-I"../rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
+-I"../rodos/src/bare-metal/stm32f4/platform-parameter/discovery" \
+-I"../rodos/src/bare-metal/stm32f4/CMSIS/Include" \
+-I"../rodos/src/bare-metal/stm32f4/sdCard" \
+-I"../rodos/src/bare-metal/stm32f4/hal" \
+-I"../rodos/src/bare-metal/stm32f4" \
+-I"../rodos/src/bare-metal-generic" \
+-I"../rodos/src/independent/gateway" \
+-I"../rodos/src/independent" \
+-I"../rodos/support/support-libs" \
+-I"../rodos/api/hal" \
+-I"../rodos/api" \
+-I"../rodos/default_usr_configs" \
 -I"../libs/vl53l4ed" \
 -I"../libs/hbridge" \
 -I"../libs/lsm9ds1" \
@@ -150,11 +161,11 @@ CXXFLAGS+=-U__STRICT_ANSI__
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = "rodos/src/bare-metal/stm32f4/scripts/stm32_flash.ld"
+LDSCRIPT = "../rodos/src/bare-metal/stm32f4/scripts/stm32_flash.ld"
 
 # libraries
 LIBS = -lm -lrodos
-LIBDIR = -L"rodos/build"
+LIBDIR = -L"../rodos/build"
 LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) -nostartfiles -nodefaultlibs -nostdlib -Xlinker --gc-sections \
 $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 

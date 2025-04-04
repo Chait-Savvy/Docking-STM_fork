@@ -31,6 +31,19 @@ Tof_measuremnt block, Tof_filter block, MPC_controller block   */
 (O) - electromagnet
  o  - time of flight sensor                     */
 
+/* I/O configuration */ 
+
+
+
+ /* Math constants */
+
+#define MU_ZERO 4 * M_PI * 1e-7                // H/m
+
+/* Coil paramaters */
+
+#define N_COIL 600                                  // Number of turns per coil     
+#define RC 0.016                               // Active radius of coils
+#define A  M_PI * RC * RC                      // Effective cross-sectional area 
 
 /*  Satellite physical parameters */ 
 
@@ -67,18 +80,50 @@ Tof_measuremnt block, Tof_filter block, MPC_controller block   */
 
 /* MPC iteration variables */
 
-#define MPC_PREDICTION_HORIZON 4            //Defines priction horizon N
+#define MPC_PREDICTION_HORIZON 20            //Defines prediction horizon N
 #define MPC_SAMPLING_TIME_MILLIS 50         // dT
 #define MPC_STATE_SPACE_SIZE MPC_PREDICTION_HORIZON
 #define MPC_CONTROL_INPUT_VECTOR_SIZE (2*MPC_PREDICTION_HORIZON)
-#define MPC_CONTROL_INPUT_SIZE 2 
-#define MPC_X_TOLERANCE_VAL 1                // Position tolerance [mm] (for docking)
-#define MPC_V_TOLERANCE_VAL 10               // Velocity tolerance [mm/s] (for docking)
-#define MPC_THETA_TOLERANCE_VAL 30           // Theta tolerance [rad||__deg__] (for docking)
+#define MPC_CONTROL_INPUT_SIZE 2
+#define MPC_X_DES 0
+#define MPC_V_DES 0 
+#define MPC_THETA_DES 0
+#define MPC_OMEGA_DES 0  
+#define MPC_X_TOLERANCE_VAL 25                // Position tolerance [mm] (for docking)
+#define MPC_V_TOLERANCE_VAL 0.1               // Velocity tolerance [mm/s] (for docking)
+#define MPC_THETA_TOLERANCE_VAL 0.1           // Theta tolerance [rad||__deg__] (for docking)
 
 /* Force to Current conversion block */
 
+#define FIXED_Z_DIST 0.252
+#define FIXED_Y_DIST 0.041
 #define DISTANCE_CONVERSION_FACTOR 1       //If dist in mm -> 1 , cm -> 10 , mtr -> 1000
-#define MAX_LOOKUP_TABLE_DIST_RANGE 300    //
+#define MAX_LOOKUP_TABLE_DIST_RANGE 300    
+#define IDX0_X (-1 * FIXED_Y_DIST)/2
+#define IDX0_Y (-1 * FIXED_Z_DIST)/2
+#define IDX1_X (1 * FIXED_Y_DIST)/2
+#define IDX1_Y (-1 * FIXED_Z_DIST)/2
+#define IDX2_X (-1 * FIXED_Y_DIST)/2
+#define IDX2_Y (1 * FIXED_Z_DIST)/2
+#define IDX3_X (1 * FIXED_Y_DIST)/2
+#define IDX3_Y (1 * FIXED_Z_DIST)/2
+
+#define PID_CURRENT_UMAX 60
+#define PID_CURRENT_UMIN 0
+#define PID_CURRENT_KP 0.065
+#define PID_CURRENT_KI 0.3
+
+/* Thread timming */
+
+#define TIME_PERIOD_PER_THREAD 10
+#define THREAD_TOF_START 50
+#define MASTER_THREAD_START_TIME (THREAD_TOF_START+TIME_PERIOD_PER_THREAD)
+#define THREAD_TELEMETRY_START (THREAD_TOF_START+TIME_PERIOD_PER_THREAD)
+#define THREAD_TCMD_START (THREAD_TELEMETRY_START+TIME_PERIOD_PER_THREAD)
+
+#define THREAD_EKF_START (THREAD_TOF_START+TIME_PERIOD_PER_THREAD)
+#define THREAD_MPC_START (THREAD_EKF_START+TIME_PERIOD_PER_THREAD)
+#define THREAD_ICTRL_START (THREAD_MPC_START+TIME_PERIOD_PER_THREAD)
+#define CURRENT_THREAD_PERIOD 10
 
 #endif //config_mpc.h

@@ -1,4 +1,7 @@
-# Rishav (2020)
+# rms (2020)
+
+# OS: Linux, Windows
+OS = Windows
 
 ######################################
 # target
@@ -34,28 +37,26 @@ ASM_SOURCES =
 # libs/DockingMain.cpp \
 
 CXX_SOURCES = \
-libs/topics.cpp \
 libs/pid/pid.cpp \
 libs/hbridge/hbridge.cpp \
-libs/ekf/filter_ekf.cpp \
-libs/mpc/controller_mpc.cpp \
-libs/topics/topic_config.cpp \
 \
 libs/vl53l4ed/platform.cpp \
 libs/vl53l4ed/VL53L4ED_api.cpp \
 libs/vl53l4ed/VL53L4ED_calibration.cpp \
 \
 satellite/tof.cpp \
-satellite/fsm.cpp \
-satellite/led.cpp \
-satellite/utils.cpp \
 satellite/magnet.cpp \
+satellite/utils.cpp \
 \
-threads/telemetry.cpp \
-threads/tof_range.cpp \
-threads/telecommand.cpp \
-threads/current_control.cpp \
-threads/collision_control.cpp
+../threads/controller_current.cpp \
+../threads/filter_ekf.cpp \
+../threads/controller_mpc.cpp \
+../threads/tof_range.cpp \
+../threads/topic_config.cpp \
+../threads/current_control.cpp \
+../threads/telemetry.cpp \
+../threads/telecommand.cpp \
+../threads/topics.cpp \
 
 #######################################
 # binaries
@@ -110,19 +111,19 @@ AS_INCLUDES = \
 
 # C includes
 C_INCLUDES =  \
--I"/rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
--I"/rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
--I"/rodos/src/bare-metal/stm32f4/platform-parameter/skith" \
--I"/rodos/src/bare-metal/stm32f4/CMSIS/Include" \
--I"/rodos/src/bare-metal/stm32f4/sdCard" \
--I"/rodos/src/bare-metal/stm32f4/hal" \
--I"/rodos/src/bare-metal/stm32f4" \
--I"/rodos/src/bare-metal-generic" \
--I"/rodos/src/independent/gateway" \
--I"/rodos/src/independent" \
--I"/rodos/default_usr_configs" \
--I"/rodos/api/hal" \
--I"/rodos/api" \
+-I"../rodos/src/bare-metal/stm32f4/CMSIS/Device/ST/STM32F4xx/Include" \
+-I"../rodos/src/bare-metal/stm32f4/STM32F4xx_StdPeriph_Driver/inc"  \
+-I"../rodos/src/bare-metal/stm32f4/platform-parameter/skith" \
+-I"../rodos/src/bare-metal/stm32f4/CMSIS/Include" \
+-I"../rodos/src/bare-metal/stm32f4/sdCard" \
+-I"../rodos/src/bare-metal/stm32f4/hal" \
+-I"../rodos/src/bare-metal/stm32f4" \
+-I"../rodos/src/bare-metal-generic" \
+-I"../rodos/src/independent/gateway" \
+-I"../rodos/src/independent" \
+-I"../rodos/default_usr_configs" \
+-I"../rodos/api/hal" \
+-I"../rodos/api" \
 \
 -I"libs/pid" \
 -I"libs/hbridge" \
@@ -155,11 +156,11 @@ CXXFLAGS+=-U__STRICT_ANSI__
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = "../rodos/src/bare-metal/stm32f4/scripts/stm32_flash.ld"
+LDSCRIPT = "rodos/src/bare-metal/stm32f4/scripts/stm32_flash.ld"
 
 # libraries
 LIBS = -lm -lrodos
-LIBDIR = -L"../rodos/build"
+LIBDIR = -L"rodos/build"
 LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) -nostartfiles -nodefaultlibs -nostdlib -Xlinker --gc-sections \
 $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
@@ -227,7 +228,7 @@ rodos-linux:
 	rm -r ../../rodos/build/CMakeFiles || true
 	rm -r ../../rodos/build/test-suite || true
 	rm ../../rodos/build/* || true
-	cmake -S../../rodos -B../rodos/build -DCMAKE_TOOLCHAIN_FILE=cmake/port/skith.cmake
+	cmake -S../../rodos -B../rodos/build -DCMAKE_TOOLCHAIN_FILE=cmake/port/discovery.cmake
 	make -C ../../rodos/build
 
 # Build RODOS for Windows
@@ -243,6 +244,38 @@ bluetooth-black:
 bluetooth-white:
 	sudo rfcomm bind 0 00:0E:EA:CF:6C:ED 1
 	python3 BLWSBridge.py
+
+# Linux
+ifeq ($(OS), Linux)
+clean:
+	rm -r $(BUILD_DIR) || true
+
+rodos: clean
+	git clone https://gitlab.com/rodos/rodos.git rodos || true
+	rm -r rodos/build/CMakeFiles || true
+	rm -r rodos/build/test-suite || true
+	rm rodos/build/* || true
+	cmake -Srodos -Brodos/build -DCMAKE_TOOLCHAIN_FILE=cmake/port/skith.cmake
+	make -C rodos/build
+
+udev:
+	sudo cp $(RULE_PATH) $(RULE_DEST)
+	sudo chmod 644 $(RULE_DEST)
+	sudo udevadm control --reload
+	sudo udevadm trigger
+endif
+
+# Windows
+ifeq ($(OS), Windows)
+clean:
+	if exist $(BUILD_DIR) rmdir /s/q $(BUILD_DIR)
+
+rodos: clean
+	if not exist "rodos" git clone https://gitlab.com/rodos/rodos.git
+	if exist "rodos/build" rmdir /s/q "rodos/build"
+	cmake -Srodos -Brodos/build -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=cmake/port/skith.cmake
+	make -C rodos/build
+endif
 
 #######################################
 # dependencies
